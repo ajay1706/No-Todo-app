@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
-import './notodoscreen.dart';
-
+import '../ui/notodoscreen.dart';
 
 class Home extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return new Scaffold(
       appBar: new AppBar(
-        title: new Text(
-          "No-Todo",
-
-        ),
+        title: Text("NoToDo"),
         backgroundColor: Colors.black54,
       ),
-body: new NotoDoScreen(),
-
+      body: new NotoDoScreen(),
     );
   }
 }

@@ -1,142 +1,204 @@
 import 'package:flutter/material.dart';
 import '../model/nodo_item.dart';
 import '../util/database_client.dart';
+import '../util/date_formatter.dart';
 
 class NotoDoScreen extends StatefulWidget {
   @override
-  _NotoDoScreenState createState() => _NotoDoScreenState();
+  _NotoDoScreenState createState() => new _NotoDoScreenState();
 }
 
 class _NotoDoScreenState extends State<NotoDoScreen> {
-  final TextEditingController _textEditingController =
-      new TextEditingController();
+  final TextEditingController _textEditingController = new TextEditingController();
   var db = new DatabaseHelper();
+  final List<NoDoItem> _itemList = <NoDoItem>[];
 
-  final List<NoDoItem> itemList = <NoDoItem>[];
 
   @override
   void initState() {
     super.initState();
-    _readNODOList();
 
+    _readNoDoList();
   }
 
-
-
-  void _handleSubmit(String text) async {
+  void _handleSubmitted(String text) async {
     _textEditingController.clear();
 
-    NoDoItem noDoItem = new NoDoItem(text, DateTime.now().toIso8601String());
-    int saveItemId = await db?.saveItem(noDoItem);
+    NoDoItem noDoItem = new NoDoItem(text, dateFormatted());
+    int savedItemId = await db.saveItem(noDoItem);
 
-    NoDoItem addedItem = await db.getItem(saveItemId);
+    NoDoItem addedItem = await db.getItem(savedItemId);
 
-setState(() {
-  itemList.insert(0, addedItem);
-});  }
+    setState(() {
+      _itemList.insert(0, addedItem);
 
+    });
+
+
+    print("Item saved id: $savedItemId");
+  }
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return new Scaffold(
       backgroundColor: Colors.black87,
-      body: Column(
+      body: new Column(
         children: <Widget>[
-
           new Flexible(
-
             child: new ListView.builder(
-              padding: const EdgeInsets.all(10.0),
-              itemCount: itemList.length,
-              itemBuilder: (_,int index){
-                return new Card(
-                  color: Colors.white10,
-                  child: new ListTile(
-                    title: itemList[index],
-                    onLongPress: () => debugPrint(""),
-                    trailing: new Listener(
-                      key: new Key(itemList[index].itemNAme),
-                      child: new Icon(Icons.remove_circle,
-                      color: Colors.redAccent,),
-                      onPointerDown: (pointerEvent) => debugPrint(""),
+                padding: new EdgeInsets.all(8.0),
+                reverse: false,
+                itemCount: _itemList.length,
+                itemBuilder: (_, int index) {
+                  return new Card(
+                    color: Colors.white10,
+                    child: new ListTile(
+                      title: _itemList[index],
+                      onLongPress: () => _udateItem(_itemList[index], index),
+                      trailing: new Listener(
+                        key: new Key(_itemList[index].itemName),
+                        child:  new Icon(Icons.remove_circle,
+                          color: Colors.redAccent,),
+                        onPointerDown: (pointerEvent) =>
+                            _deleteNoDo(_itemList[index].id, index),
+                      ),
                     ),
+                  );
 
-                  ),
-
-                );
-              },
-            ),
-
-
+                }),
           ),
-          new Divider(height: 1.3,)
 
-
-
-
+          new Divider(
+            height: 1.0,
+          )
         ],
       ),
 
 
-
       floatingActionButton: new FloatingActionButton(
-        backgroundColor: Colors.redAccent,
-        tooltip: "Add Item",
-        child: new ListTile(
-          title: new Icon(Icons.add),
-        ),
-        onPressed: _showFormDialog,
-      ),
+          tooltip: "Add Item",
+          backgroundColor: Colors.redAccent,
+          child: new ListTile(
+            title: new Icon(Icons.add),
+          ),
+          onPressed: _showFormDialog),
     );
   }
-
 
   void _showFormDialog() {
     var alert = new AlertDialog(
       content: new Row(
         children: <Widget>[
           new Expanded(
-            child: new TextField(
-              controller: _textEditingController,
-              autofocus: true,
-              decoration: new InputDecoration(
-                labelText: "Item",
-                hintText: "Eg: Dont buy stuff",
-                icon: new Icon(Icons.note_add),
-              ),
-            ),
-          )
+              child: new TextField(
+                controller: _textEditingController,
+                autofocus: true,
+                decoration: new InputDecoration(
+                    labelText: "Item",
+                    hintText: "eg. Don't buy stuff",
+                    icon: new Icon(Icons.note_add)
+                ),
+              ))
         ],
       ),
       actions: <Widget>[
         new FlatButton(
-          onPressed: () {
-            _handleSubmit(_textEditingController.text);
-            _textEditingController.clear();
-            Navigator.pop(context);
-          },
-          child: Text("Save"),
-        ),
-        new FlatButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text("Cancel"),
-        )
+            onPressed: () {
+              _handleSubmitted(_textEditingController.text);
+              _textEditingController.clear();
+              Navigator.pop(context);
+            },
+            child: Text("Save")),
+        new FlatButton(onPressed: () => Navigator.pop(context),
+            child: Text("Cancel"))
+
       ],
     );
-
-    showDialog(
-        context: context,
-        builder: (_) {
+    showDialog(context: context,
+        builder:(_) {
           return alert;
+
         });
   }
 
-
-  _readNODOList() async{
-
+  _readNoDoList() async {
     List items = await db.getItems();
-    items.forEach((item){
-      NoDoItem noDoItem = NoDoItem.map(items);
-print("Db items: ${noDoItem.itemNAme}");
+    items.forEach((item) {
+      // NoDoItem noDoItem = NoDoItem.fromMap(item);
+      setState(() {
+        _itemList.add(NoDoItem.map(item));
+      });
+      // print("Db items: ${noDoItem.itemName}");
+    });
+
+  }
+
+  _deleteNoDo(int id, int index) async {
+    debugPrint("Deleted Item!");
+
+    await db.deleteItem(id);
+    setState(() {
+      _itemList.removeAt(index);
+    });
+
+
+  }
+
+  _udateItem(NoDoItem item, int index) {
+    var alert = new AlertDialog(
+      title: new Text("Update Item"),
+      content: new Row(
+        children: <Widget>[
+          new Expanded(
+              child: new TextField(
+                controller: _textEditingController,
+                autofocus: true,
+
+                decoration: new InputDecoration(
+                    labelText:  "Item",
+                    hintText: "eg. Don't buy stuff",
+                    icon: new Icon(Icons.update)),
+              ))
+        ],
+      ),
+      actions: <Widget>[
+        new FlatButton(
+            onPressed: () async {
+              NoDoItem newItemUpdated = NoDoItem.fromMap(
+                  {"itemName": _textEditingController.text,
+                    "dateCreated" : dateFormatted(),
+                    "id" : item.id
+                  });
+
+              _handleSubmittedUpdate(index, item);//redrawing the screen
+              await db.updateItem(newItemUpdated); //updating the item
+              setState(() {
+                _readNoDoList(); // redrawing the screen with all items saved in the db
+              });
+
+              Navigator.pop(context);
+
+            },
+            child: new Text("Update")),
+        new FlatButton(onPressed: () => Navigator.pop(context),
+            child: new Text("Cancel"))
+      ],
+    );
+    showDialog(context:
+    context ,builder: (_) {
+      return alert;
+    });
+
+
+
+  }
+
+  void _handleSubmittedUpdate(int index, NoDoItem item) {
+    setState(() {
+      _itemList.removeWhere((element) {
+        _itemList[index].itemName == item.itemName;
+
+      });
+
     });
   }
 }
